@@ -29,6 +29,7 @@ resolve_path() {
 	if [[ "$1" =~ : ]]; then
         # treat as an address or url, return as is
         echo "$1"
+        return
 	fi
     cd "$(dirname "$1")"
     local abs_path
@@ -54,7 +55,8 @@ fi
 CHAINID="beacond-2061"
 MONIKER="localtestnet"
 LOGLEVEL="info"
-HOMEDIR="./.tmp/beacond"
+HOMEDIR="${HOMEDIR:-./.tmp/beacond}"
+NON_INTERACTIVE="${NON_INTERACTIVE:-}"
 
 # Path variables
 GENESIS=$HOMEDIR/config/genesis.json
@@ -66,21 +68,37 @@ KZG_PATH=$(resolve_path "./testing/files/kzg-trusted-setup.json")
 # used to exit on first error (any non-zero exit code)
 set -e
 
-# Reinstall daemon
-make build
+if [ "$NON_INTERACTIVE" ]; then
+  # Executing within the e2e framework
 
-overwrite="N"
-if [ -d $HOMEDIR ]; then
-	printf "\nAn existing folder at '%s' was found. You can choose to delete this folder and start a new local node with new keys from genesis. When declined, the existing local node is started. \n" $HOMEDIR
-	echo "Overwrite the existing configuration and start a new local node? [y/n]"
-	read -r overwrite
+  if [ -f "$HOMEDIR/emulate-latency.sh" ]; then
+      "$HOMEDIR/emulate-latency.sh"
+  fi
+
+  # Forcibly remove any stray UNIX sockets left behind from previous runs
+  rm -rf /var/run/privval.sock /var/run/app.sock || true
+
+  # If there is no configuration provided, create one (for one-node testing only)
+  if [ ! -f "$GENESIS" ]; then
+    overwrite="Y"
+  fi
 else
-overwrite="Y"
+  # Reinstall daemon
+  make build
+
+  overwrite="N"
+  if [ -d $HOMEDIR ]; then
+    printf "\nAn existing folder at '%s' was found. You can choose to delete this folder and start a new local node with new keys from genesis. When declined, the existing local node is started. \n" $HOMEDIR
+    echo "Overwrite the existing configuration and start a new local node? [y/n]"
+    read -r overwrite
+  else
+    overwrite="Y"
+  fi
 fi
 
 # Setup local node if overwrite is set to Yes, otherwise skip setup
 if [[ $overwrite == "y" || $overwrite == "Y" ]]; then
-	rm -rf $HOMEDIR
+	rm -rf $HOMEDIR || true
 	./build/bin/beacond init $MONIKER --chain-id $CHAINID --home $HOMEDIR $CHAIN_SPEC_ARG
 
 	if [ "$CHAIN_SPEC" == "testnet" ]; then

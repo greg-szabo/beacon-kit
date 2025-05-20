@@ -407,3 +407,14 @@ test-e2e-deposits: ## run e2e tests
 
 test-e2e-deposits-no-build:
 	go test -timeout 0 -tags e2e,bls12381,test ./testing/e2e/. -v -testify.m TestDepositRobustness
+
+###############################################################################
+###                              E2E Framework                              ###
+###############################################################################
+
+test-consensus-e2e: ## run consensus-e2e tests
+	@$(MAKE) build-docker VERSION=local-version build-docker-consensus-e2e VERSION=local-version test-consensus-e2e-no-build
+
+test-consensus-e2e-no-build:
+	echo hello
+	docker images

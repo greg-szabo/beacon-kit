@@ -100,6 +100,7 @@ IMAGE_NAME ?= $(TESTAPP)
 
 # Docker Paths
 DOCKERFILE = ./Dockerfile
+DOCKERFILE_CONSENSUS_E2E = ./testing/framework/docker/Dockerfile
 
 build-docker: ## build a docker image containing `beacond`
 	@echo "Build a release docker image for the Cosmos SDK chain..."
@@ -118,3 +119,15 @@ push-docker-github: ## push the docker image to the ghcr registry
 	@echo "Push the release docker image to the ghcr registry..."
 	docker tag $(IMAGE_NAME):$(VERSION) ghcr.io/berachain/beacon-kit:$(VERSION)
 	docker push ghcr.io/berachain/beacon-kit:$(VERSION)
+
+build-docker-consensus-e2e: ## build a docker image containing `beacond` used in the consensus-e2e tests
+	@echo "Build a consensus-e2e docker image for the end-to-end framework..."
+	docker build \
+	--build-arg IMAGE_NAME=$(IMAGE_NAME) \
+	--build-arg VERSION=$(VERSION) \
+	-f ${DOCKERFILE_CONSENSUS_E2E} \
+	-t $(IMAGE_NAME)/e2e-node:$(VERSION) \
+	./testing # work around .dockerignore restrictions in the root folder
+
+build-generator: ## build e2e framework generator
+	@go build -mod=readonly -o $(OUT_DIR)/generator ./testing/framework/generator
