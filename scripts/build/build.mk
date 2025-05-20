@@ -130,4 +130,27 @@ build-docker-consensus-e2e: ## build a docker image containing `beacond` used in
 	./testing # work around .dockerignore restrictions in the root folder
 
 build-generator: ## build e2e framework generator
-	@go build -mod=readonly -o $(OUT_DIR)/generator ./testing/framework/generator
+	@echo "Build the e2e framework generator..."
+	@go build -mod=readonly -o $(OUT_DIR)/generator github.com/cometbft/cometbft/test/e2e/generator
+
+# Hack: force the same viper version as CometBFT.
+# The berachain cometbft fork is on an incompatible viper version.
+# TODO: Update viper in the cometbft fork.
+COMETBFT_DEPENDENCY_PATH := $(shell go list -m -f '{{ .Dir }}' github.com/cometbft/cometbft)
+COMETBFT_VIPER_VERSION := "$(shell go list -m -f '{{ .Version }}' -modfile "$(COMETBFT_DEPENDENCY_PATH)/go.mod" github.com/spf13/viper)"
+BEACONKIT_VIPER_VERSION := "$(shell go list -m -f '{{ .Version }}' github.com/spf13/viper)"
+
+build-runner: ## build e2e framework runner
+	@echo "Build the e2e framework runner..."
+
+# Hack: Force the same viper version.
+	@echo "CometBFT dependency path: $(COMETBFT_DEPENDENCY_PATH)"
+	@test -d "$(COMETBFT_DEPENDENCY_PATH)" || go mod download
+	@echo "Beaconkit Viper version: $(BEACONKIT_VIPER_VERSION)"
+	@echo "CometBFT Viper version: $(COMETBFT_VIPER_VERSION)"
+	@go get "github.com/spf13/viper@$(COMETBFT_VIPER_VERSION)"
+# End of hack.
+	@go build -mod=readonly -o $(OUT_DIR)/runner github.com/cometbft/cometbft/test/e2e/runner
+# Hack: restore original viper version.
+	@go get "github.com/spf13/viper@$(BEACONKIT_VIPER_VERSION)"
+# End of hack.

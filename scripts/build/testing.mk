@@ -412,9 +412,23 @@ test-e2e-deposits-no-build:
 ###                              E2E Framework                              ###
 ###############################################################################
 
-test-consensus-e2e: ## run consensus-e2e tests
-	@$(MAKE) build-docker VERSION=local-version build-docker-consensus-e2e VERSION=local-version test-consensus-e2e-no-build
+test-consensus-e2e: ## run consensus-e2e CI tests
+	@$(MAKE) build-docker VERSION=local-version \
+		build-docker-consensus-e2e VERSION=local-version \
+		build-generator \
+		build-runner \
+		test-consensus-e2e-no-build
 
 test-consensus-e2e-no-build:
-	echo hello
-	docker images
+	#./run-multiple.sh networks/ci.toml
+
+test-consensus-e2e-nightly: ## run consensus-e2e nightly tests
+	@$(MAKE) build-docker VERSION=local-version \
+		build-docker-consensus-e2e VERSION=local-version \
+		build-generator \
+		build-runner \
+		test-consensus-e2e-no-build-nightly
+
+test-consensus-e2e-no-build-nightly:
+	build/bin/generator -g 5 -d testing/framework/networks/nightly -p
+	#./run-multiple.sh testing/framework/networks/nightly/*-group*-*.toml
